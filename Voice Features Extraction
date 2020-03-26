@@ -1,7 +1,7 @@
-#Some parts of the code were extracted from collect_formant_data_from_files.praat, script distributed under the GNU General Public License
-#Copyright 4.7.2003 Mietta Lennes
-#=====================================================================================================
-#And from extraccion_de_formantes_en_tabla.praat developed by Joaquim Llisterri, UAB.
+#Some parts of the code were extracted from 
+#collect_formant_data_from_files.praat, script distributed under the GNU General Public License, Copyright 4.7.2003 Mietta Lennes
+#And from 
+#extraccion_de_formantes_en_tabla.praat developed by Joaquim Llisterri, UAB.
 #=====================================================================================================
 #The script searches for sound files and TextGrid files with the same label.
 #For each sound file and for its corresponding TextGrid of the five Spanish vowels the values of Formants (F1, F2 and F3), Shimmer, Jitter, HNR and Pitch parameters are calculated
