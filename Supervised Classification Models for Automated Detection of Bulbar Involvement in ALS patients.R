@@ -269,7 +269,7 @@ for (i in 1:it) {
 
   
   #Plotting PCA
-  if(analysis == "pca" & plot_pca == TRUE) {
+  if(plot_pca == TRUE) {
     
     #PC1 vs PC2
     g <- ggbiplot(pca.df, ellipse=TRUE, groups = df$bulbar_involvement)
