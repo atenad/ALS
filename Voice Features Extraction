@@ -447,4 +447,4 @@ procedure GetTier name$ variable$
 
 endproc
 
-#Fin del script
+#End
