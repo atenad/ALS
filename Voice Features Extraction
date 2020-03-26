@@ -1,0 +1,450 @@
+#Some parts of the code were extracted from collect_formant_data_from_files.praat, script distributed under the GNU General Public License
+#Copyright 4.7.2003 Mietta Lennes
+#=====================================================================================================
+#And from extraccion_de_formantes_en_tabla.praat developed by Joaquim Llisterri, UAB.
+#=====================================================================================================
+#The script searches for sound files and TextGrid files with the same label.
+#For each sound file and for its corresponding TextGrid of the five Spanish vowels the values of Formants (F1, F2 and F3), Shimmer, Jitter, HNR and Pitch parameters are calculated
+#The results are saved in a text file with the columns separated by tabs
+#and the rows separated by line breaks. 
+#Alberto Tena, UdL/CIMNE.
+#=====================================================================================================
+
+
+#Main Form to set initial parameters 
+#=====================================================================================================
+
+form Features Extraction
+	comment Sounds Directory (finished in /):
+	text sound_directory 
+	sentence Sounds_file_extension .wav
+	comment Text Grid Directory (finished in /):
+	text textGrid_directory 
+	sentence Text_grid_file_extension .TextGrid
+	comment Results directory
+	comment results name file (.txt)
+	text resultfile .txt
+	comment Analysis group (Analysis=male), (Analysis=female) or ((Analysis=all):
+	word analysis all
+	comment Tier name:
+	sentence Tier 
+	comment Optional Parameters to formants extracción
+	comment (Menu Configuration "Analyse spectrum > To Formant (burg)...")
+	comment Time Step (en s):
+	positive Time_step 0.01
+	comment Maximum number of formants:
+	integer Maximum_number_of_formants 5
+	comment Window length (en s):
+	positive Window_length 0.025
+	comment Preemphasis filter from... (en Hz)
+	comment (increase the amplitud above the limit established)
+	real Preemphasis_from 50
+endform
+
+#=====================================================================================================
+
+#Participants code
+
+#=====================================================================================================
+
+males$ = "HUB003 HUB004 HUB005 HUB007 HUB010 HUB013 HUB014 HUB016 HUB018 HUB019 HUB020 HUB022 HUB023 HUB025 HUB028 HUB033 HUB034 HUB035 HUB036 HUB041 HUB043 HUB044 HUB045 HUB046 HUB047 HUB048 HUB049 HUB050 C001 C004 C007 C008 C009 C010 C014 C015 C018"
+
+#=====================================================================================================
+
+#Sounds File List (sound_directory)
+#extension (Sounds_file_extension) 
+
+#=====================================================================================================
+
+Create Strings as file list... list 'sound_directory$'*'Sounds_file_extension$'
+numberOfFiles = Get number of strings
+
+#=====================================================================================================
+
+#Check if a results file exists
+
+#=====================================================================================================
+
+if fileReadable (resultfile$)
+	pause The file already exits. ¿Do you want to replece it?
+	filedelete 'resultfile$'
+endif
+
+#=====================================================================================================
+
+#Results file rows:
+
+#=====================================================================================================
+
+titleline$ = "Code File Segment Sex F1_mean F2_mean F3_mean Jitter_local Jitter_local_absolute Jitter_rap Jitter_ppq5 Jitter_ddp Shimmer_local Shimmer_local_dB Shimmer_apq3 Shimmer_apq5 Shimmer_apq11 Shimmer_dda Mean_F0 Mean_F0_SD Min_F0 Max_F0 Mean_HNR SD_HNR'newline$'"
+fileappend "'resultfile$'" 'titleline$'
+
+#=====================================================================================================
+
+#Features Extraction
+
+#=====================================================================================================
+
+for ifile to numberOfFiles
+	filename$ = Get string... ifile
+	
+		#Open a sound file from the list
+		Read from file... 'sound_directory$''filename$'
+
+		#Assign optional parameters values for male and females voices:
+	
+		if left$ (filename$, 1) = "H"
+	
+			speaker_code$ = left$ (filename$, 6)
+
+			male = index(males$, speaker_code$)
+
+			if male > 0		
+				gender_code$ = "M"
+			else 
+				gender_code$ = "F"
+			endif
+
+			if gender_code$ = "F"
+				maximum_formant = 5500
+				time_step = 0.0
+				pitch_floor = 100
+				pitch_ceiling = 500
+			elsif gender_code$ = "M"
+				maximum_formant = 5000
+				time_step = 0.0
+				pitch_floor = 60
+				pitch_ceiling = 300
+			endif
+		else
+			speaker_code$ = left$ (filename$, 4)
+
+			male = index(males$, speaker_code$)
+
+			if male > 0		
+				gender_code$ = "M"
+			else 
+			gender_code$ = "F"
+			endif
+
+			if gender_code$ = "F"
+				maximum_formant = 5500
+				time_step = 0.0
+				pitch_floor = 100
+				pitch_ceiling = 500
+			elsif gender_code$ = "M"
+				maximum_formant = 5000
+				time_step = 0.0
+				pitch_floor = 60
+				pitch_ceiling = 300
+			endif
+		endif
+
+		soundname$ = selected$ ("Sound", 1)
+		To Formant (burg)... time_step maximum_number_of_formants maximum_formant window_length preemphasis_from
+	
+		#Extraction for males, females or all
+		if analysis$ = "all" 
+	
+			#Open a TextGrid with the same name as sound file name
+			gridfile$ = "'textGrid_directory$''soundname$''Text_grid_file_extension$'"
+			if fileReadable (gridfile$)
+				Read from file... 'gridfile$'
+
+				#Find the tier number corresponding to the name (Tier) entered in the form
+				call GetTier 'tier$' tier
+				numberOfIntervals = Get number of intervals... tier
+
+				#Search in all the intervals of the selected tier
+				for interval to numberOfIntervals
+					label$ = Get label of interval... tier interval
+					if label$ = "a" or label$ = "e" or label$ = "i" or label$ = "o" or label$ = "u"
+
+						#Find the interval middle and select the 10% of the phonation
+						start = Get starting point... tier interval
+						end = Get end point... tier interval
+						duration = 1000*(end - start)
+						dur10 = (end - start)/10
+						midpoint = start + (end - start)/2
+						start2 = midpoint - dur10
+						end2 = midpoint + dur10
+
+						#Extract F1, F2 and F3
+						select Formant 'soundname$'
+						f1_mean = Get mean... 1 start2 end2 Hertz
+						f2_mean = Get mean... 2 start2 end2 Hertz
+						f3_mean = Get mean... 3 start2 end2 Hertz
+					
+						#Extract Pitch Paramenters
+						select Sound 'soundname$'
+						To Pitch... time_step pitch_floor pitch_ceiling
+						meanpitch = Get mean... start end Hertz
+						meansd = Get standard deviation... start end Hertz
+						minpitch = Get minimum... start end Hertz Parabolic
+						maxpitch = Get maximum... start end Hertz Parabolic
+					
+										
+						#This part measures jitter & shimmer
+						select Sound 'soundname$'
+						To PointProcess (periodic, cc)... pitch_floor pitch_ceiling
+						meanlocal = Get jitter (local)... start end 0.0001 0.02 1.3
+						meanlocalabsolute = Get jitter (local, absolute)... start end 0.0001 0.02 1.3
+						meanrap = Get jitter (rap)... start end 0.0001 0.02 1.3
+						meanppq5 = Get jitter (ppq5)... start end 0.0001 0.02 1.3
+						meanddp = Get jitter (ddp)... start end 0.0001 0.02 1.3
+		
+						select Sound 'soundname$'
+						plus PointProcess 'soundname$'
+						meanlocal =  Get shimmer (local)... start end 0.0001 0.02 1.3 1.6
+						meanlocaldb = Get shimmer (local_dB)... start end 0.0001 0.02 1.3 1.6
+						meanapq3 = Get shimmer (apq3)... start end 0.0001 0.02 1.3 1.6
+						meanaqpq5 = Get shimmer (apq5)... start end 0.0001 0.02 1.3 1.6
+						meanapq11 =  Get shimmer (apq11)... start end 0.0001 0.02 1.3 1.6
+						meandda = Get shimmer (dda)... start end 0.0001 0.02 1.3 1.6
+					
+						#This part measures harmoncs to noise ratio
+						select Sound 'soundname$'
+						To Harmonicity (cc)... 0.01 60 0.1 4.5
+						meanHNR = Get mean... start end
+						meansdHNR = Get standard deviation... start end
+						
+						select Pitch 'soundname$'
+						plus PointProcess 'soundname$'
+						plus Harmonicity 'soundname$'
+						Remove
+						
+						if index(filename$, "HUB") > 0
+							code_name$ = left$ (filename$, 6)
+						
+						else
+							code_name$ = left$ (filename$, 4)
+						
+						endif
+
+						#Save the results
+						resultline$ = "'code_name$' 'soundname$' 'label$' 'gender_code$' 'f1_mean:4' 'f2_mean:4' 'f3_mean:4' 'meanlocal:4' 'meanlocalabsolute:4' 'meanrap:4' 'meanppq5:4' 'meanddp:4' 'meanlocal:4' 'meanlocaldb:4' 'meanapq3:4' 'meanaqpq5:4' 'meanapq11:4' 'meandda:4' 'meanpitch:4' 'meansd:4' 'minpitch:4' 'maxpitch:4' 'meanHNR:4' 'meansdHNR:4''newline$'"
+						fileappend "'resultfile$'" 'resultline$'
+						select TextGrid 'soundname$'
+					endif
+				endfor
+			
+				#Remove TextGrids from the object list
+				select TextGrid 'soundname$'
+				Remove
+			endif	
+	
+		elsif analisis$ = "male" and gender_code$ = "M"
+			
+			#Open a TextGrid with the same name as sound file name
+			gridfile$ = "'textGrid_directory$''soundname$''Text_grid_file_extension$'"
+			if fileReadable (gridfile$)
+				Read from file... 'gridfile$'
+
+				#Find the tier number corresponding to the name (Tier) entered in the form
+				call GetTier 'tier$' tier
+				numberOfIntervals = Get number of intervals... tier
+
+				#Search in all the intervals of the selected tier
+				for interval to numberOfIntervals
+					label$ = Get label of interval... tier interval
+					if label$ = "a" or label$ = "e" or label$ = "i" or label$ = "o" or label$ = "u"
+
+						#Find the interval middle and select the 10% of the phonation
+						start = Get starting point... tier interval
+						end = Get end point... tier interval
+						duration = 1000*(end - start)
+						dur10 = (end - start)/10
+						midpoint = start + (end - start)/2
+						start2 = midpoint - dur10
+						end2 = midpoint + dur10
+
+						#Extract F1, F2 and F3
+						select Formant 'soundname$'
+						f1_mean = Get mean... 1 start2 end2 Hertz
+						f2_mean = Get mean... 2 start2 end2 Hertz
+						f3_mean = Get mean... 3 start2 end2 Hertz
+					
+						#Extract Pitch Paramenters
+						select Sound 'soundname$'
+						To Pitch... time_step pitch_floor pitch_ceiling
+						meanpitch = Get mean... start end Hertz
+						meansd = Get standard deviation... start end Hertz
+						minpitch = Get minimum... start end Hertz Parabolic
+						maxpitch = Get maximum... start end Hertz Parabolic
+					
+										
+						#This part measures jitter & shimmer
+						select Sound 'soundname$'
+						To PointProcess (periodic, cc)... pitch_floor pitch_ceiling
+						meanlocal = Get jitter (local)... start end 0.0001 0.02 1.3
+						meanlocalabsolute = Get jitter (local, absolute)... start end 0.0001 0.02 1.3
+						meanrap = Get jitter (rap)... start end 0.0001 0.02 1.3
+						meanppq5 = Get jitter (ppq5)... start end 0.0001 0.02 1.3
+						meanddp = Get jitter (ddp)... start end 0.0001 0.02 1.3
+		
+						select Sound 'soundname$'
+						plus PointProcess 'soundname$'
+						meanlocal =  Get shimmer (local)... start end 0.0001 0.02 1.3 1.6
+						meanlocaldb = Get shimmer (local_dB)... start end 0.0001 0.02 1.3 1.6
+						meanapq3 = Get shimmer (apq3)... start end 0.0001 0.02 1.3 1.6
+						meanaqpq5 = Get shimmer (apq5)... start end 0.0001 0.02 1.3 1.6
+						meanapq11 =  Get shimmer (apq11)... start end 0.0001 0.02 1.3 1.6
+						meandda = Get shimmer (dda)... start end 0.0001 0.02 1.3 1.6
+					
+						#This part measures harmoncs to noise ratio
+						select Sound 'soundname$'
+						To Harmonicity (cc)... 0.01 60 0.1 4.5
+						meanHNR = Get mean... start end
+						meansdHNR = Get standard deviation... start end
+						
+						select Pitch 'soundname$'
+						plus PointProcess 'soundname$'
+						plus Harmonicity 'soundname$'
+						Remove
+						
+						if index(filename$, "HUB") > 0
+							code_name$ = left$ (filename$, 6)
+						
+						else
+							code_name$ = left$ (filename$, 4)
+						
+						endif
+
+						#Save the results
+						resultline$ = "'code_name$' 'soundname$' 'label$' 'gender_code$' 'f1_mean:4' 'f2_mean:4' 'f3_mean:4' 'meanlocal:4' 'meanlocalabsolute:4' 'meanrap:4' 'meanppq5:4' 'meanddp:4' 'meanlocal:4' 'meanlocaldb:4' 'meanapq3:4' 'meanaqpq5:4' 'meanapq11:4' 'meandda:4' 'meanpitch:4' 'meansd:4' 'minpitch:4' 'maxpitch:4' 'meanHNR:4' 'meansdHNR:4''newline$'"
+						fileappend "'resultfile$'" 'resultline$'
+						select TextGrid 'soundname$'
+					endif
+				endfor
+			
+				#Remove TextGrids from the object list
+				select TextGrid 'soundname$'
+				Remove
+			endif
+	
+		elsif analisis$ == "female" and gender_code$ = "F"
+		
+			#Open a TextGrid with the same name as sound file name
+			gridfile$ = "'textGrid_directory$''soundname$''Text_grid_file_extension$'"
+			if fileReadable (gridfile$)
+				Read from file... 'gridfile$'
+
+				#Find the tier number corresponding to the name (Tier) entered in the form
+				call GetTier 'tier$' tier
+				numberOfIntervals = Get number of intervals... tier
+
+				#Search in all the intervals of the selected tier
+				for interval to numberOfIntervals
+					label$ = Get label of interval... tier interval
+					if label$ = "a" or label$ = "e" or label$ = "i" or label$ = "o" or label$ = "u"
+
+						#Find the interval middle and select the 10% of the phonation
+						start = Get starting point... tier interval
+						end = Get end point... tier interval
+						duration = 1000*(end - start)
+						dur10 = (end - start)/10
+						midpoint = start + (end - start)/2
+						start2 = midpoint - dur10
+						end2 = midpoint + dur10
+
+						#Extract F1, F2 and F3
+						select Formant 'soundname$'
+						f1_mean = Get mean... 1 start2 end2 Hertz
+						f2_mean = Get mean... 2 start2 end2 Hertz
+						f3_mean = Get mean... 3 start2 end2 Hertz
+					
+						#Extract Pitch Paramenters
+						select Sound 'soundname$'
+						To Pitch... time_step pitch_floor pitch_ceiling
+						meanpitch = Get mean... start end Hertz
+						meansd = Get standard deviation... start end Hertz
+						minpitch = Get minimum... start end Hertz Parabolic
+						maxpitch = Get maximum... start end Hertz Parabolic
+					
+										
+						#This part measures jitter & shimmer
+						select Sound 'soundname$'
+						To PointProcess (periodic, cc)... pitch_floor pitch_ceiling
+						meanlocal = Get jitter (local)... start end 0.0001 0.02 1.3
+						meanlocalabsolute = Get jitter (local, absolute)... start end 0.0001 0.02 1.3
+						meanrap = Get jitter (rap)... start end 0.0001 0.02 1.3
+						meanppq5 = Get jitter (ppq5)... start end 0.0001 0.02 1.3
+						meanddp = Get jitter (ddp)... start end 0.0001 0.02 1.3
+		
+						select Sound 'soundname$'
+						plus PointProcess 'soundname$'
+						meanlocal =  Get shimmer (local)... start end 0.0001 0.02 1.3 1.6
+						meanlocaldb = Get shimmer (local_dB)... start end 0.0001 0.02 1.3 1.6
+						meanapq3 = Get shimmer (apq3)... start end 0.0001 0.02 1.3 1.6
+						meanaqpq5 = Get shimmer (apq5)... start end 0.0001 0.02 1.3 1.6
+						meanapq11 =  Get shimmer (apq11)... start end 0.0001 0.02 1.3 1.6
+						meandda = Get shimmer (dda)... start end 0.0001 0.02 1.3 1.6
+					
+						#This part measures harmoncs to noise ratio
+						select Sound 'soundname$'
+						To Harmonicity (cc)... 0.01 60 0.1 4.5
+						meanHNR = Get mean... start end
+						meansdHNR = Get standard deviation... start end
+						
+						select Pitch 'soundname$'
+						plus PointProcess 'soundname$'
+						plus Harmonicity 'soundname$'
+						Remove
+						
+						if index(filename$, "HUB") > 0
+							code_name$ = left$ (filename$, 6)
+						
+						else
+							code_name$ = left$ (filename$, 4)
+						
+						endif
+
+						#Save the results
+						resultline$ = "'code_name$' 'soundname$' 'label$' 'gender_code$''f1_mean:4' 'f2_mean:4' 'f3_mean:4' 'meanlocal:4' 'meanlocalabsolute:4' 'meanrap:4' 'meanppq5:4' 'meanddp:4' 'meanlocal:4' 'meanlocaldb:4' 'meanapq3:4' 'meanaqpq5:4' 'meanapq11:4' 'meandda:4' 'meanpitch:4' 'meansd:4' 'minpitch:4' 'maxpitch:4' 'meanHNR:4' 'meansdHNR:4''newline$'"
+						fileappend "'resultfile$'" 'resultline$'
+						select TextGrid 'soundname$'
+					endif
+				endfor
+			
+				#Remove TextGrids from the object list
+				select TextGrid 'soundname$'
+				Remove
+			endif
+		endif
+		# Remove temporal objects
+		select Sound 'soundname$'
+		plus Formant 'soundname$'
+		Remove
+		select Strings list
+	#Next file
+endfor
+
+Remove
+
+#=====================================================================================================
+
+#Procedure to find the number of tier that contains a certain label
+
+#=====================================================================================================
+
+
+procedure GetTier name$ variable$
+        numberOfTiers = Get number of tiers
+        itier = 1
+        repeat
+                tier$ = Get tier name... itier
+                itier = itier + 1
+        until tier$ = name$ or itier > numberOfTiers
+        if tier$ <> name$
+                'variable$' = 0
+        else
+                'variable$' = itier - 1
+        endif
+
+	if 'variable$' = 0
+		exit The tier called 'name$' is missing from the file 'soundname$'!
+	endif
+
+endproc
+
+#Fin del script
