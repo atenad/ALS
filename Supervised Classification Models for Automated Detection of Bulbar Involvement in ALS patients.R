@@ -222,7 +222,7 @@ for (i in 1:it) {
     df.a.lda <- lda(bulbar_involvement~., data = train)
     
     #Prediction
-    df.a.lda.predict <- predict(df.a.lda, newdata = test[-20])
+    df.a.lda.predict <- predict(df.a.lda, newdata = test[-13])
     df.a.lda.predict.posteriors <- as.data.frame(df.a.lda.predict$posterior)
       
     } else if (analysis == "LR" & groups != 4) {
@@ -326,7 +326,7 @@ for (i in 1:it) {
       
     } else if (analysis == "LDA") {
       
-      c_or_p1 <- ifelse(df.a.lda.predict.posteriors [ , 2] > threshold, "2", "1")
+      c_or_p1 <- ifelse(df.a.lda.predict.posteriors [ , 1] > threshold, "1", "2")
       test[["bulbar_involvement"]] <- as.factor(test[["bulbar_involvement"]])
       p_class1 <- as.factor(c_or_p1)
       levels(p_class1)  = levels(test[["bulbar_involvement"]])
