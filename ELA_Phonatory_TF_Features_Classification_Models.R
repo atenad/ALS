@@ -38,8 +38,10 @@ groups <- 1
 
 #Import the synthetic dataset with phonatory subsystem and time frequency_features freely available in https://github.com/atenad/ALS/blob/master/ALS_PHONATORY_TIME_FREQUENCY_SYNTHETIC_DATA.xlsx
 
+path <-        ### Add the path where ALS_PHONATORY_TIME_FREQUENCY_SYNTHETIC_DATA.xlsx file is saved
+
 library(readxl)
-ph_tf <- read_excel("ALS_PHONATORY_TIME_FREQUENCY_SYNTHETIC_DATA.xlsx")
+ph_tf <- read_excel(path)
 View(ph_tf)
 
 ph_tf[ ,1:54] <- scale(ph_tf[ , c(1:54)], center= TRUE, scale=TRUE)
